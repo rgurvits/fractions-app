@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חשבון בשבילים - שברים</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Assistant', sans-serif; background-color: #f8fafc; }
+        .num-box { width: 60px; height: 60px; text-align: center; border: 3px solid #94a3b8; border-radius: 12px; font-size: 1.8rem; font-weight: bold; }
+        .num-box:focus { border-color: #3b82f6; outline: none; background-color: #eff6ff; }
+        .fraction-line { height: 4px; background-color: #334155; width: 60px; border-radius: 2px; }
+        .explanation-card { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-sm p-4 mb-4 flex justify-between items-center border border-slate-200">
+        <select id="level-selector" onchange="jumpToLevel(this.value)" class="bg-slate-100 p-2 rounded-lg font-bold text-slate-700 outline-none">
+            <option value="1">שלב 1: זיהוי שבר</option>
+            <option value="2">שלב 2: למספר מעורב</option>
+            <option value="3">שלב 3: חיבור שברים</option>
+            <option value="4">שלב 4: בעיות מילוליות</option>
+        </select>
+        <div id="stars-display" class="text-xl font-bold text-amber-500">⭐ 0</div>
+    </div>
+
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-xl p-6 border border-slate-100 min-h-[450px] flex flex-col items-center">
+        <div id="progress-dots" class="flex gap-2 mb-6"></div>
+        
+        <h2 id="instruction" class="text-2xl font-bold text-slate-800 mb-6 text-center h-14"></h2>
+
+        <div id="visual-display" class="mb-8 flex justify-center items-center gap-4 min-h-[120px]"></div>
+
+        <div id="exercise-ui" class="flex flex-col items-center gap-6 w-full">
+            <div id="input-fields" class="flex items-center gap-4"></div>
+            <button id="check-btn" onclick="validate()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl text-xl font-bold shadow-lg active:scale-95 transition-transform">בדקי תשובה</button>
+        </div>
+
+        <div id="feedback" class="mt-6 w-full hidden">
+            <div id="feedback-msg" class="p-4 rounded-xl text-center font-bold mb-4"></div>
+            <div id="explanation-box" class="bg-amber-50 border-2 border-amber-200 p-4 rounded-xl text-slate-700 text-sm hidden explanation-card">
+                <h4 class="font-bold mb-2">💡 איך פותרים?</h4>
+                <p id="explanation-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            level: parseInt(localStorage.getItem('f_level')) || 1,
+            subLevel: parseInt(localStorage.getItem('f_sub')) || 0,
+            stars: parseInt(localStorage.getItem('f_stars')) || 0,
+            current: null
+        };
+
+        function save() {
+            localStorage.setItem('f_level', gameState.level);
+            localStorage.setItem('f_sub', gameState.subLevel);
+            localStorage.setItem('f_stars', gameState.stars);
+            document.getElementById('stars-display').innerText = `⭐ ${gameState.stars}`;
+            document.getElementById('level-selector').value = gameState.level;
+        }
+
+        function jumpToLevel(l) {
+            gameState.level = parseInt(l);
+            gameState.subLevel = 0;
+            save();
+            renderLevel();
+        }
+
+        function renderLevel() {
+            const visual = document.getElementById('visual-display');
+            const inputs = document.getElementById('input-fields');
+            const instruct = document.getElementById('instruction');
+            const feedback = document.getElementById('feedback');
+            
+            feedback.classList.add('hidden');
+            visual.innerHTML = "";
+            inputs.innerHTML = "";
+
+            if (gameState.level === 1) {
+                instruct.innerText = "איזה שבר מיוצג בציור?";
+                let den = [2,3,4,5,6,8,10][Math.floor(Math.random()*7)];
+                let num = Math.floor(Math.random() * (den - 1)) + 1;
+                gameState.current = { num, den, whole: 0 };
+                drawShapes(num, den);
+                createFractionInput(false);
+            } 
+            else if (gameState.level === 2) {
+                instruct.innerText = "הפכי את השבר המדומה למספר מעורב:";
+                let den = Math.floor(Math.random() * 3) + 2;
+                let whole = Math.floor(Math.random() * 2) + 1;
+                let rem = Math.floor(Math.random() * (den - 1)) + 1;
+                let totalNum = (whole * den) + rem;
+                gameState.current = { num: rem, den: den, whole: whole, prompt: `${totalNum}/${den}` };
+                visual.innerHTML = `<div class="text-4xl font-bold text-indigo-600">${gameState.current.prompt}</div>`;
+                createFractionInput(true);
+            }
+            else if (gameState.level === 3) {
+                let den = Math.floor(Math.random() * 5) + 3;
+                let n1 = Math.floor(Math.random() * (den/2)) + 1;
+                let n2 = Math.floor(Math.random() * (den/2)) + 1;
+                gameState.current = { num: n1 + n2, den: den, whole: 0 };
+                instruct.innerText = "פתרי את תרגיל החיבור:";
+                visual.innerHTML = `<div class="text-3xl font-bold">${n1}/${den} + ${n2}/${den} = ?</div>`;
+                createFractionInput(false);
+            }
+        }
+
+        function drawShapes(num, den) {
+            let html = `<svg viewBox="0 0 100 100" class="w-24 h-24">
+                <circle cx="50" cy="50" r="45" fill="#e2e8f0" />`;
+            for (let i = 0; i < num; i++) {
+                const start = (i * 360) / den;
+                const end = ((i + 1) * 360) / den;
+                const x1 = 50 + 45 * Math.cos((Math.PI * (start-90)) / 180);
+                const y1 = 50 + 45 * Math.sin((Math.PI * (start-90)) / 180);
+                const x2 = 50 + 45 * Math.cos((Math.PI * (end-90)) / 180);
+                const y2 = 50 + 45 * Math.sin((Math.PI * (end-90)) / 180);
+                html += `<path d="M50,50 L${x1},${y1} A45,45 0 0,1 ${x2},${y2} Z" fill="#fbbf24" stroke="white" stroke-width="1" />`;
+            }
+            html += `</svg>`;
+            document.getElementById('visual-display').innerHTML = html;
+        }
+
+        function createFractionInput(withWhole) {
+            let html = "";
+            if (withWhole) html += `<input id="ans-w" type="number" class="num-box" placeholder="שלם">`;
+            html += `<div class="flex flex-col items-center gap-1">
+                        <input id="ans-n" type="number" class="num-box" placeholder="מונה">
+                        <div class="fraction-line"></div>
+                        <input id="ans-d" type="number" class="num-box" placeholder="מכנה">
+                     </div>`;
+            document.getElementById('input-fields').innerHTML = html;
+        }
+
+        function validate() {
+            const uN = parseInt(document.getElementById('ans-n').value);
+            const uD = parseInt(document.getElementById('ans-d').value);
+            const uW = parseInt(document.getElementById('ans-w')?.value || 0);
+            const feedback = document.getElementById('feedback');
+            const msg = document.getElementById('feedback-msg');
+            const exp = document.getElementById('explanation-box');
+
+            if (uN === gameState.current.num && uD === gameState.current.den && uW === gameState.current.whole) {
+                msg.innerText = "מצוין! כל הכבוד! 🎉";
+                msg.className = "p-4 rounded-xl text-center font-bold mb-4 bg-green-100 text-green-700";
+                gameState.stars += 10;
+                gameState.subLevel++;
+                exp.classList.add('hidden');
+                setTimeout(() => {
+                    if (gameState.subLevel >= 5) {
+                        gameState.level = Math.min(4, gameState.level + 1);
+                        gameState.subLevel = 0;
+                    }
+                    save();
+                    renderLevel();
+                }, 1500);
+            } else {
+                msg.innerText = "לא בדיוק... נסי שוב!";
+                msg.className = "p-4 rounded-xl text-center font-bold mb-4 bg-red-100 text-red-700";
+                exp.classList.remove('hidden');
+                setExplanation();
+            }
+            feedback.classList.remove('hidden');
+        }
+
+        function setExplanation() {
+            const txt = document.getElementById('explanation-text');
+            if (gameState.level === 1) txt.innerText = "המונה (למעלה) מציין כמה חלקים צבועים. המכנה (למטה) מציין לכמה חלקים חילקנו את העיגול כולו.";
+            if (gameState.level === 2) txt.innerText = `כדי להפוך את ${gameState.current.prompt} למספר מעורב, בדקי כמה פעמים המכנה נכנס במונה. במקרה הזה המכנה נכנס ${gameState.current.whole} פעמים שלמות, והשארית היא המונה החדש.`;
+            if (gameState.level === 3) txt.innerText = "בחיבור שברים עם מכנה זהה, אנחנו מחברים רק את המונים (המספרים למעלה). המכנה נשאר אותו דבר!";
+        }
+
+        renderLevel();
+        save();
+    </script>
+</body>
+</html>
