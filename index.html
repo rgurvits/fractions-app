@@ -1,220 +1,797 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>חשבון בשבילים - שברים</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Assistant', sans-serif; background-color: #f0fdf4; }
-        .num-box { width: 60px; height: 60px; text-align: center; border: 3px solid #cbd5e1; border-radius: 12px; font-size: 1.8rem; font-weight: bold; background: white; }
-        .num-box:focus { border-color: #22c55e; outline: none; background-color: #f0fdf4; }
-        .fraction-line { height: 4px; background-color: #334155; width: 60px; border-radius: 2px; }
-        .explanation-card { animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>לומדים שברים! 🍕</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { rubik: ['Rubik', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Rubik', sans-serif; box-sizing: border-box; }
+    body { background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 50%, #fefce8 100%); min-height: 100vh; }
+
+    /* Fraction Input Fields */
+    .fraction-input {
+      width: 64px; height: 64px;
+      border: 3px solid #d1d5db;
+      border-radius: 14px;
+      font-size: 1.75rem; font-weight: 700;
+      text-align: center; color: #1e293b;
+      background: white; cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none; -webkit-user-select: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fraction-input.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+    }
+    .fraction-input.filled { border-color: #6366f1; color: #4f46e5; }
+
+    /* Keypad Buttons */
+    .key-btn {
+      width: 72px; height: 60px;
+      border-radius: 14px;
+      font-size: 1.5rem; font-weight: 700;
+      border: none; cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; -webkit-user-select: none;
+    }
+    .key-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+    .key-num { background: #fef3c7; color: #92400e; }
+    .key-num:hover { background: #fde68a; }
+    .key-check { background: #4ade80; color: white; }
+    .key-check:hover { background: #22c55e; }
+    .key-del { background: #fecaca; color: #991b1b; }
+    .key-del:hover { background: #fca5a5; }
+
+    /* Progress Dots */
+    .progress-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+    .progress-dot.done { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+    .progress-dot.pending { background: #e2e8f0; }
+
+    /* Animations */
+    @keyframes bounceIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .bounce-in { animation: bounceIn 0.4s ease forwards; }
+    .shake { animation: shake 0.4s ease; }
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+    /* Stars sparkle */
+    @keyframes starPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    .star-pop { animation: starPop 0.3s ease; }
+
+    /* Level complete overlay */
+    #level-complete { display: none; }
+    #level-complete.show { display: flex; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* Whole number separator */
+    .whole-sep {
+      font-size: 1.5rem; font-weight: 700; color: #475569;
+      padding: 0 6px; align-self: center;
+    }
+
+    /* SVG container */
+    #svg-area svg { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1)); }
+
+    /* Explanation box */
+    #explanation-box {
+      border-right: 5px solid #60a5fa;
+      background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+    }
+  </style>
 </head>
-<body class="p-4 flex flex-col items-center min-h-screen">
+<body class="min-h-screen pb-4">
 
-    <div class="w-full max-w-lg bg-white rounded-2xl shadow p-4 mb-4 flex justify-between items-center border border-green-100">
-        <select id="level-selector" onchange="jumpToLevel(this.value)" class="bg-green-50 p-2 rounded-lg font-bold text-green-800 outline-none border border-green-200">
-            <option value="1">שלב 1: זיהוי שבר (ויזואלי)</option>
-            <option value="2">שלב 2: למספר מעורב</option>
-            <option value="3">שלב 3: חיבור וחיסור</option>
-            <option value="4">שלב 4: בעיות מילוליות</option>
+  <!-- ===== HEADER ===== -->
+  <header class="bg-gradient-to-l from-blue-500 to-indigo-600 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+      <!-- Stars -->
+      <div class="flex items-center gap-2 bg-white/20 rounded-xl px-3 py-1.5">
+        <span id="star-icon" class="text-2xl">⭐</span>
+        <span id="star-count" class="text-xl font-bold">0</span>
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-xl font-extrabold tracking-wide">לומדים שברים! 🍕</h1>
+
+      <!-- Level Selector -->
+      <div class="relative">
+        <select id="level-select"
+          class="appearance-none bg-white/20 text-white font-bold rounded-xl px-3 py-1.5 text-sm border border-white/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50">
+          <option value="1">רמה 1 🎨</option>
+          <option value="2">רמה 2 🔄</option>
+          <option value="3">רמה 3 ➕</option>
+          <option value="4">רמה 4 📖</option>
         </select>
-        <div id="stars-display" class="text-xl font-bold text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">⭐ 0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="max-w-lg mx-auto px-4 pt-4 space-y-4">
+
+    <!-- Progress Bar -->
+    <div class="bg-white rounded-2xl shadow-md px-5 py-3 flex items-center justify-between">
+      <span class="text-sm font-semibold text-slate-500">התקדמות ברמה</span>
+      <div class="flex items-center gap-2">
+        <div id="progress-dots" class="flex gap-2">
+          <!-- dots injected by JS -->
+        </div>
+        <span id="progress-text" class="text-sm font-bold text-slate-600 mr-1">0/5</span>
+      </div>
     </div>
 
-    <div class="w-full max-w-lg bg-white rounded-3xl shadow-lg p-6 border border-slate-100 min-h-[450px] flex flex-col items-center">
-        <div id="progress-text" class="text-sm font-bold text-slate-400 mb-2"></div>
-        
-        <h2 id="instruction" class="text-2xl font-bold text-slate-800 mb-4 text-center min-h-[60px] flex items-center justify-center"></h2>
+    <!-- Question Card -->
+    <div id="question-card" class="bg-white rounded-2xl shadow-lg p-5 fade-in">
+      <!-- Level Badge -->
+      <div id="level-badge" class="inline-block bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full mb-3"></div>
 
-        <div id="visual-display" class="mb-6 flex justify-center items-center gap-4 min-h-[120px] flex-wrap"></div>
+      <!-- SVG Area (Level 1 only) -->
+      <div id="svg-area" class="flex justify-center mb-4 hidden"></div>
 
-        <div id="exercise-ui" class="flex flex-col items-center gap-6 w-full">
-            <div id="input-fields" class="flex items-center gap-4 justify-center w-full"></div>
-            <button id="check-btn" onclick="validate()" class="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl text-xl font-bold shadow-md active:scale-95 transition-all">בדקי תשובה</button>
+      <!-- Question Text -->
+      <p id="question-text" class="text-xl font-bold text-slate-700 text-center leading-relaxed mb-4"></p>
+
+      <!-- Fraction Display (for levels 2,3,4) -->
+      <div id="fraction-display" class="hidden flex justify-center mb-4">
+        <div class="bg-indigo-50 rounded-2xl px-6 py-3 text-center">
+          <div id="fraction-display-content" class="text-4xl font-extrabold text-indigo-700"></div>
         </div>
-
-        <div id="feedback" class="mt-6 w-full hidden">
-            <div id="feedback-msg" class="p-4 rounded-xl text-center font-bold mb-4 text-lg"></div>
-            <div id="explanation-box" class="bg-blue-50 border-2 border-blue-200 p-4 rounded-xl text-blue-900 hidden explanation-card">
-                <h4 class="font-bold mb-2 flex items-center gap-2"><span>💡</span> איך פותרים?</h4>
-                <p id="explanation-text" class="text-lg leading-relaxed"></p>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <script>
-        let gameState = {
-            level: parseInt(localStorage.getItem('f_level')) || 1,
-            subLevel: parseInt(localStorage.getItem('f_sub')) || 0,
-            stars: parseInt(localStorage.getItem('f_stars')) || 0,
-            current: null
-        };
+    <!-- Input Area -->
+    <div id="input-area" class="bg-white rounded-2xl shadow-lg p-5">
+      <p class="text-sm font-semibold text-slate-500 mb-3 text-center">הכניסי את התשובה:</p>
+      <div class="flex items-center justify-center gap-3 flex-wrap">
 
-        function save() {
-            localStorage.setItem('f_level', gameState.level);
-            localStorage.setItem('f_sub', gameState.subLevel);
-            localStorage.setItem('f_stars', gameState.stars);
-            document.getElementById('stars-display').innerText = `⭐ ${gameState.stars}`;
-            document.getElementById('level-selector').value = gameState.level;
-            document.getElementById('progress-text').innerText = `תרגיל ${gameState.subLevel + 1} מתוך 5`;
-        }
+        <!-- Whole Number (Level 2 only) -->
+        <div id="whole-container" class="hidden items-center gap-2">
+          <div id="field-whole" class="fraction-input" onclick="setActiveField('whole')">
+            <span id="val-whole" class="pointer-events-none">_</span>
+          </div>
+          <span class="whole-sep">ו</span>
+        </div>
 
-        function jumpToLevel(l) {
-            gameState.level = parseInt(l);
-            gameState.subLevel = 0;
-            save();
-            renderLevel();
-        }
+        <!-- Numerator / Denominator -->
+        <div class="flex flex-col items-center gap-1">
+          <div id="field-numerator" class="fraction-input" onclick="setActiveField('numerator')">
+            <span id="val-numerator" class="pointer-events-none">_</span>
+          </div>
+          <div class="w-16 border-b-4 border-slate-700 rounded"></div>
+          <div id="field-denominator" class="fraction-input" onclick="setActiveField('denominator')">
+            <span id="val-denominator" class="pointer-events-none">_</span>
+          </div>
+        </div>
 
-        function renderLevel() {
-            const visual = document.getElementById('visual-display');
-            const inputs = document.getElementById('input-fields');
-            const instruct = document.getElementById('instruction');
-            const feedback = document.getElementById('feedback');
-            
-            feedback.classList.add('hidden');
-            visual.innerHTML = "";
-            inputs.innerHTML = "";
+      </div>
+    </div>
 
-            if (gameState.level === 1) {
-                instruct.innerText = "איזה שבר מיוצג בציור?";
-                let den = [2,3,4,5,6,8][Math.floor(Math.random()*6)];
-                let num = Math.floor(Math.random() * (den - 1)) + 1;
-                gameState.current = { num, den, whole: 0, type: 'visual' };
-                
-                // Randomly choose circle or rectangle
-                if (Math.random() > 0.5) drawCircle(num, den);
-                else drawRect(num, den);
-                
-                createFractionInput(false);
-            } 
-            else if (gameState.level === 2) {
-                instruct.innerText = "הפכי את השבר המדומה למספר מעורב:";
-                let den = Math.floor(Math.random() * 3) + 3; // 3 to 5
-                let whole = Math.floor(Math.random() * 2) + 1; // 1 to 2
-                let rem = Math.floor(Math.random() * (den - 1)) + 1;
-                let totalNum = (whole * den) + rem;
-                gameState.current = { num: rem, den: den, whole: whole, promptNum: totalNum, type: 'mixed' };
-                visual.innerHTML = `<div class="text-5xl font-bold text-green-600 tracking-widest">${totalNum}/${den}</div>`;
-                createFractionInput(true);
-            }
-            else if (gameState.level === 3) {
-                let den = Math.floor(Math.random() * 5) + 4; // 4 to 8
-                let isAddition = Math.random() > 0.5;
-                
-                if (isAddition) {
-                    let n1 = Math.floor(Math.random() * (den/2)) + 1;
-                    let n2 = Math.floor(Math.random() * (den/2)) + 1;
-                    gameState.current = { num: n1 + n2, den: den, whole: 0, n1, n2, op: '+' };
-                    instruct.innerText = "פתרי את תרגיל החיבור:";
-                    visual.innerHTML = `<div class="text-4xl font-bold text-slate-700" dir="ltr">${n1}/${den} + ${n2}/${den} = ?</div>`;
-                } else {
-                    let n1 = Math.floor(Math.random() * (den-2)) + 2; // at least 2
-                    let n2 = Math.floor(Math.random() * (n1-1)) + 1; // less than n1
-                    gameState.current = { num: n1 - n2, den: den, whole: 0, n1, n2, op: '-' };
-                    instruct.innerText = "פתרי את תרגיל החיסור:";
-                    visual.innerHTML = `<div class="text-4xl font-bold text-slate-700" dir="ltr">${n1}/${den} - ${n2}/${den} = ?</div>`;
-                }
-                createFractionInput(false);
-            }
-            else if (gameState.level === 4) {
-                instruct.innerText = "קראי את הסיפור ופתרי:";
-                const names = ["רוני", "נועם", "מאיה", "אורי"];
-                const name = names[Math.floor(Math.random()*names.length)];
-                let den = Math.floor(Math.random() * 4) + 4; // 4 to 7
-                let isAddition = Math.random() > 0.5;
-                
-                if (isAddition) {
-                    let n1 = Math.floor(Math.random() * (den-2)) + 1;
-                    let n2 = Math.floor(Math.random() * (den-n1-1)) + 1;
-                    gameState.current = { num: n1 + n2, den: den, whole: 0, op: '+', n1, n2 };
-                    visual.innerHTML = `<div class="text-xl text-right p-4 bg-slate-50 rounded-lg border border-slate-200">ל${name} היו <b>${n1}/${den}</b> של חפיסת שוקולד. חבר נתן לו עוד <b>${n2}/${den}</b>.<br><br>כמה שוקולד יש ל${name} עכשיו?</div>`;
-                } else {
-                    let n1 = Math.floor(Math.random() * (den-2)) + 2;
-                    let n2 = Math.floor(Math.random() * (n1-1)) + 1;
-                    gameState.current = { num: n1 - n2, den: den, whole: 0, op: '-', n1, n2 };
-                    visual.innerHTML = `<div class="text-xl text-right p-4 bg-slate-50 rounded-lg border border-slate-200">ל${name} היו <b>${n1}/${den}</b> של פיצה. הוא אכל <b>${n2}/${den}</b>.<br><br>כמה פיצה נשארה ל${name}?</div>`;
-                }
-                createFractionInput(false);
-            }
-        }
+    <!-- Feedback Area -->
+    <div id="feedback-area" class="hidden rounded-2xl p-4 text-center fade-in">
+      <p id="feedback-text" class="text-lg font-bold mb-2"></p>
+    </div>
 
-        // --- Visual Functions ---
-        function drawCircle(num, den) {
-            let html = `<svg viewBox="0 0 100 100" class="w-32 h-32 drop-shadow-md">
-                <circle cx="50" cy="50" r="48" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" />`;
-            for (let i = 0; i < den; i++) {
-                const start = (i * 360) / den;
-                const end = ((i + 1) * 360) / den;
-                const x1 = 50 + 48 * Math.cos((Math.PI * (start-90)) / 180);
-                const y1 = 50 + 48 * Math.sin((Math.PI * (start-90)) / 180);
-                const x2 = 50 + 48 * Math.cos((Math.PI * (end-90)) / 180);
-                const y2 = 50 + 48 * Math.sin((Math.PI * (end-90)) / 180);
-                let fill = i < num ? '#f59e0b' : 'transparent'; // Orange for Pizza
-                html += `<path d="M50,50 L${x1},${y1} A48,48 0 0,1 ${x2},${y2} Z" fill="${fill}" stroke="#cbd5e1" stroke-width="1.5" />`;
-            }
-            html += `</svg>`;
-            document.getElementById('visual-display').innerHTML = html;
-        }
+    <!-- Explanation Box -->
+    <div id="explanation-box" class="hidden rounded-2xl p-4 fade-in">
+      <div class="flex items-start gap-2">
+        <span class="text-2xl">💡</span>
+        <div>
+          <p class="font-bold text-blue-700 mb-1">איך פותרים?</p>
+          <p id="explanation-text" class="text-slate-700 leading-relaxed"></p>
+        </div>
+      </div>
+    </div>
 
-        function drawRect(num, den) {
-            let html = `<svg viewBox="0 0 ${den*30} 40" class="h-16 drop-shadow-md rounded-sm">`;
-            for(let i=0; i<den; i++) {
-                let fill = i < num ? '#8b5a2b' : '#f1f5f9'; // Brown for chocolate
-                html += `<rect x="${i*30}" y="0" width="30" height="40" fill="${fill}" stroke="#ffffff" stroke-width="2" />`;
-            }
-            html += `</svg>`;
-            document.getElementById('visual-display').innerHTML = html;
-        }
-        // ------------------------
+    <!-- Keypad -->
+    <div id="keypad" class="bg-white rounded-2xl shadow-lg p-4">
+      <div class="grid grid-cols-3 gap-3 max-w-xs mx-auto">
+        <button class="key-btn key-num" onclick="keyPress('7')">7</button>
+        <button class="key-btn key-num" onclick="keyPress('8')">8</button>
+        <button class="key-btn key-num" onclick="keyPress('9')">9</button>
+        <button class="key-btn key-num" onclick="keyPress('4')">4</button>
+        <button class="key-btn key-num" onclick="keyPress('5')">5</button>
+        <button class="key-btn key-num" onclick="keyPress('6')">6</button>
+        <button class="key-btn key-num" onclick="keyPress('1')">1</button>
+        <button class="key-btn key-num" onclick="keyPress('2')">2</button>
+        <button class="key-btn key-num" onclick="keyPress('3')">3</button>
+        <button class="key-btn key-check" onclick="checkAnswer()">✓</button>
+        <button class="key-btn key-num" onclick="keyPress('0')">0</button>
+        <button class="key-btn key-del" onclick="keyDelete()">⌫</button>
+      </div>
+    </div>
 
-        function createFractionInput(withWhole) {
-            let html = "";
-            if (withWhole) {
-                html += `<div class="flex flex-col items-center"><span class="text-sm text-slate-500 mb-1">שלמים</span><input id="ans-w" type="number" class="num-box"></div>`;
-            }
-            html += `<div class="flex flex-col items-center gap-2">
-                        <span class="text-sm text-slate-500 -mb-1">מונה (חלקים)</span>
-                        <input id="ans-n" type="number" class="num-box">
-                        <div class="fraction-line"></div>
-                        <input id="ans-d" type="number" class="num-box">
-                        <span class="text-sm text-slate-500 -mt-1">מכנה (סה"כ)</span>
-                     </div>`;
-            document.getElementById('input-fields').innerHTML = html;
-        }
+  </main>
 
-        function validate() {
-            const uN = parseInt(document.getElementById('ans-n').value) || 0;
-            const uD = parseInt(document.getElementById('ans-d').value) || 0;
-            const uW = parseInt(document.getElementById('ans-w')?.value || 0);
-            const feedback = document.getElementById('feedback');
-            const msg = document.getElementById('feedback-msg');
-            const exp = document.getElementById('explanation-box');
+  <!-- ===== LEVEL COMPLETE OVERLAY ===== -->
+  <div id="level-complete"
+    class="fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center bounce-in">
+      <div class="text-6xl mb-3" id="complete-emoji">🎉</div>
+      <h2 class="text-2xl font-extrabold text-slate-800 mb-2" id="complete-title">כל הכבוד!</h2>
+      <p class="text-slate-600 mb-2" id="complete-subtitle"></p>
+      <div class="bg-amber-50 rounded-xl py-3 px-4 mb-5 inline-block">
+        <span class="text-2xl font-bold text-amber-600">⭐ +50 כוכבים!</span>
+      </div>
+      <div class="flex flex-col gap-3">
+        <button id="btn-practice-more"
+          onclick="practiceMore()"
+          class="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-3 rounded-xl text-lg transition-colors">
+          תרגלי עוד ברמה זו 🔁
+        </button>
+        <button id="btn-next-level"
+          onclick="nextLevel()"
+          class="w-full bg-green-400 hover:bg-green-500 text-white font-bold py-3 rounded-xl text-lg transition-colors">
+          עברי לרמה הבאה ←
+        </button>
+      </div>
+    </div>
+  </div>
 
-            if (uN === gameState.current.num && uD === gameState.current.den && uW === gameState.current.whole) {
-                msg.innerText = "אלופה! תשובה נכונה! 🎉";
-                msg.className = "p-4 rounded-xl text-center font-bold mb-4 bg-green-100 text-green-700 text-xl border-2 border-green-300";
-                gameState.stars += 10;
-                gameState.subLevel++;
-                exp.classList.add('hidden');
-                
-                setTimeout(() => {
-                    if (gameState.subLevel >= 5) {
-                        gameState.level = Math.min(4, gameState.level + 1);
-                        gameState.subLevel = 0;
-                    }
-                    save();
-                    renderLevel();
-                }, 1800);
-            } else {
-                msg.innerText = "כמעט... בואי נבדוק ביחד איפה הטעות.";
-                msg.className = "p-4 rounded-xl text-center font-bold mb-4 bg-red-100 text-red-700 text-xl border-2 border-red-300";
-                exp.classList.remove('hidden');
-                setExplanation();
-            }
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+  // ============================================================
+  // STATE MANAGEMENT
+  // ============================================================
+  const STORAGE_KEY = 'fractionsApp_v2';
+
+  const state = {
+    stars: 0,
+    level: 1,
+    correctCount: 0,
+    question: null,
+    activeField: 'numerator',
+    values: { whole: '', numerator: '', denominator: '' }
+  };
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      stars: state.stars,
+      level: state.level,
+      correctCount: state.correctCount
+    }));
+  }
+
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if (saved.stars !== undefined) state.stars = saved.stars;
+      if (saved.level !== undefined) state.level = Math.min(Math.max(saved.level, 1), 4);
+      if (saved.correctCount !== undefined) state.correctCount = saved.correctCount;
+    } catch(e) { /* ignore */ }
+  }
+
+  // ============================================================
+  // UTILITIES
+  // ============================================================
+  function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  function randFrom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  function gcd(a, b) {
+    return b === 0 ? a : gcd(b, a % b);
+  }
+
+  // ============================================================
+  // SVG GENERATORS
+  // ============================================================
+  function generatePizzaSVG(x, y) {
+    const cx = 120, cy = 120, r = 100;
+    const angleStep = (2 * Math.PI) / y;
+    let paths = '';
+
+    for (let i = 0; i < y; i++) {
+      const startAngle = -Math.PI / 2 + i * angleStep;
+      const endAngle = startAngle + angleStep;
+      const x1 = cx + r * Math.cos(startAngle);
+      const y1 = cy + r * Math.sin(startAngle);
+      const x2 = cx + r * Math.cos(endAngle);
+      const y2 = cy + r * Math.sin(endAngle);
+      const largeArc = angleStep > Math.PI ? 1 : 0;
+      const fill = i < x ? '#fb923c' : '#fef9f0';
+      const stroke = i < x ? '#ea580c' : '#d1d5db';
+
+      paths += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z"
+        fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>`;
+    }
+
+    // Outer circle border
+    paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#9a3412" stroke-width="3"/>`;
+    // Center dot
+    paths += `<circle cx="${cx}" cy="${cy}" r="5" fill="#9a3412"/>`;
+
+    return `<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+  }
+
+  function generateChocolateSVG(x, y) {
+    const cols = Math.ceil(Math.sqrt(y));
+    const rows = Math.ceil(y / cols);
+    const cellW = 40, cellH = 30, gap = 4;
+    const totalW = cols * cellW + (cols - 1) * gap + 20;
+    const totalH = rows * cellH + (rows - 1) * gap + 20;
+    let rects = '';
+
+    for (let i = 0; i < y; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const rx = 10 + col * (cellW + gap);
+      const ry = 10 + row * (cellH + gap);
+      const fill = i < x ? '#92400e' : '#d4a574';
+      const stroke = i < x ? '#78350f' : '#b8956a';
+      rects += `<rect x="${rx}" y="${ry}" width="${cellW}" height="${cellH}" rx="5" ry="5"
+        fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    }
+
+    return `<svg width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+  }
+
+  // ============================================================
+  // LEVEL 1 — Visual Fractions
+  // ============================================================
+  function generateLevel1() {
+    const denominator = rand(2, 8);
+    const numerator = rand(1, denominator - 1);
+    const type = randFrom(['circle', 'rectangle']);
+    return {
+      level: 1, type, numerator, denominator,
+      answer: { whole: '', numerator: String(numerator), denominator: String(denominator) }
+    };
+  }
+
+  function explainLevel1(q) {
+    const typeName = q.type === 'circle' ? 'הפיצה' : 'השוקולד';
+    return `ב${typeName} יש <strong>${q.denominator}</strong> חלקים שווים, ו-<strong>${q.numerator}</strong> מהם צבועים. לכן השבר הוא <strong>${q.numerator}/${q.denominator}</strong>.`;
+  }
+
+  // ============================================================
+  // LEVEL 2 — Improper to Mixed
+  // ============================================================
+  function generateLevel2() {
+    const denominator = rand(2, 8);
+    const whole = rand(1, 4);
+    const remainder = rand(1, denominator - 1);
+    const numerator = whole * denominator + remainder;
+    return {
+      level: 2, numerator, denominator, whole, remainder,
+      answer: { whole: String(whole), numerator: String(remainder), denominator: String(denominator) }
+    };
+  }
+
+  function explainLevel2(q) {
+    return `מחלקים <strong>${q.numerator}</strong> ב-<strong>${q.denominator}</strong>: ${q.numerator} ÷ ${q.denominator} = <strong>${q.whole}</strong> שלמים ועוד <strong>${q.remainder}</strong>. לכן התשובה היא <strong>${q.whole}</strong> ו-<strong>${q.remainder}/${q.denominator}</strong>.`;
+  }
+
+  // ============================================================
+  // LEVEL 3 — Addition & Subtraction (like denominators)
+  // ============================================================
+  function generateLevel3() {
+    const op = randFrom(['+', '-']);
+    const denominator = rand(4, 12);
+    let a = rand(1, denominator - 1);
+    let b = rand(1, denominator - 1);
+    if (op === '-') {
+      if (a <= b) { const tmp = a; a = b; b = tmp; }
+      if (a === b) { a = Math.min(a + 1, denominator - 1); }
+    }
+    const result = op === '+' ? a + b : a - b;
+    return {
+      level: 3, op, a, b, denominator, result,
+      answer: { whole: '', numerator: String(result), denominator: String(denominator) }
+    };
+  }
+
+  function explainLevel3(q) {
+    const opWord = q.op === '+' ? 'מחברים' : 'מחסרים';
+    const opSymbol = q.op === '+' ? '+' : '-';
+    return `כי המכנים שניהם <strong>${q.denominator}</strong>, רק ${opWord} את המונים: <strong>${q.a} ${opSymbol} ${q.b} = ${q.result}</strong>. המכנה נשאר <strong>${q.denominator}</strong>. התשובה: <strong>${q.result}/${q.denominator}</strong>.`;
+  }
+
+  // ============================================================
+  // LEVEL 4 — Word Problems
+  // ============================================================
+  const NAMES = ['מאיה', 'נועה', 'תמר', 'שירה', 'ליאור', 'דנה', 'רוני', 'יעל', 'אורי'];
+  const ITEMS = ['פיצה', 'עוגה', 'שוקולד', 'אבטיח', 'תפוח', 'לחם'];
+
+  function generateLevel4() {
+    const denominator = rand(4, 10);
+    const a = rand(3, denominator - 1);
+    const b = rand(1, a - 1);
+    const result = a - b;
+    const name = randFrom(NAMES);
+    const item = randFrom(ITEMS);
+    const text = `ל${name} היה <strong>${a}/${denominator}</strong> מ${item}. היא אכלה <strong>${b}/${denominator}</strong>. כמה נשאר?`;
+    return {
+      level: 4, name, item, a, b, denominator, result, text,
+      answer: { whole: '', numerator: String(result), denominator: String(denominator) }
+    };
+  }
+
+  function explainLevel4(q) {
+    return `ל${q.name} היה <strong>${q.a}/${q.denominator}</strong>. היא אכלה <strong>${q.b}/${q.denominator}</strong>. כי המכנים שווים, מחסרים את המונים: <strong>${q.a} - ${q.b} = ${q.result}</strong>. נשאר <strong>${q.result}/${q.denominator}</strong>.`;
+  }
+
+  // ============================================================
+  // QUESTION GENERATION & RENDERING
+  // ============================================================
+  const LEVEL_GENERATORS = [null, generateLevel1, generateLevel2, generateLevel3, generateLevel4];
+  const LEVEL_NAMES = ['', 'שברים ויזואליים 🎨', 'שבר בלתי אמיתי 🔄', 'חיבור וחיסור ➕', 'בעיות מילוליות 📖'];
+
+  function generateQuestion() {
+    const q = LEVEL_GENERATORS[state.level]();
+    state.question = q;
+    state.values = { whole: '', numerator: '', denominator: '' };
+    renderQuestion();
+    clearFeedback();
+    // Set default active field
+    if (state.level === 2) {
+      setActiveField('whole');
+    } else {
+      setActiveField('numerator');
+    }
+  }
+
+  function renderQuestion() {
+    const q = state.question;
+
+    // Level badge
+    document.getElementById('level-badge').textContent = `רמה ${state.level} — ${LEVEL_NAMES[state.level]}`;
+
+    // SVG area
+    const svgArea = document.getElementById('svg-area');
+    const fracDisplay = document.getElementById('fraction-display');
+    const fracContent = document.getElementById('fraction-display-content');
+
+    if (q.level === 1) {
+      svgArea.classList.remove('hidden');
+      fracDisplay.classList.add('hidden');
+      svgArea.innerHTML = q.type === 'circle'
+        ? generatePizzaSVG(q.numerator, q.denominator)
+        : generateChocolateSVG(q.numerator, q.denominator);
+      document.getElementById('question-text').textContent = 'איזה שבר מיוצג בציור?';
+    } else if (q.level === 2) {
+      svgArea.classList.add('hidden');
+      fracDisplay.classList.remove('hidden');
+      fracContent.innerHTML = `<div class="flex flex-col items-center"><span>${q.numerator}</span><div class="border-b-4 border-indigo-700 w-12 my-1"></div><span>${q.denominator}</span></div>`;
+      document.getElementById('question-text').textContent = 'המר את השבר הבלתי אמיתי למספר מעורב:';
+    } else if (q.level === 3) {
+      svgArea.classList.add('hidden');
+      fracDisplay.classList.remove('hidden');
+      fracContent.innerHTML = `<span class="text-3xl">${q.a}/${q.denominator} ${q.op === '+' ? '+' : '−'} ${q.b}/${q.denominator} = ?</span>`;
+      document.getElementById('question-text').textContent = 'חשבי את התוצאה:';
+    } else if (q.level === 4) {
+      svgArea.classList.add('hidden');
+      fracDisplay.classList.add('hidden');
+      document.getElementById('question-text').innerHTML = q.text;
+    }
+
+    // Show/hide whole number field
+    const wholeContainer = document.getElementById('whole-container');
+    if (q.level === 2) {
+      wholeContainer.classList.remove('hidden');
+      wholeContainer.classList.add('flex');
+    } else {
+      wholeContainer.classList.add('hidden');
+      wholeContainer.classList.remove('flex');
+    }
+
+    // Render input values
+    renderInputValues();
+    renderProgress();
+    renderStars();
+  }
+
+  function renderInputValues() {
+    const fields = ['whole', 'numerator', 'denominator'];
+    fields.forEach(f => {
+      const el = document.getElementById(`val-${f}`);
+      const fieldEl = document.getElementById(`field-${f}`);
+      const val = state.values[f];
+      el.textContent = val === '' ? '_' : val;
+      fieldEl.classList.toggle('filled', val !== '');
+      fieldEl.classList.toggle('active', state.activeField === f);
+    });
+  }
+
+  function renderProgress() {
+    const dots = document.getElementById('progress-dots');
+    dots.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const dot = document.createElement('div');
+      dot.className = `progress-dot ${i < state.correctCount ? 'done' : 'pending'}`;
+      dots.appendChild(dot);
+    }
+    document.getElementById('progress-text').textContent = `${state.correctCount}/5`;
+  }
+
+  function renderStars() {
+    document.getElementById('star-count').textContent = state.stars;
+  }
+
+  // ============================================================
+  // KEYPAD LOGIC
+  // ============================================================
+  function setActiveField(field) {
+    state.activeField = field;
+    renderInputValues();
+  }
+
+  function keyPress(digit) {
+    const field = state.activeField;
+    if (!field) return;
+    const current = state.values[field];
+    if (current.length >= 2) return; // max 2 digits
+    state.values[field] = current + digit;
+    renderInputValues();
+
+    // Auto-advance focus
+    if (state.values[field].length >= 2) {
+      autoAdvanceField(field);
+    }
+  }
+
+  function autoAdvanceField(current) {
+    const q = state.question;
+    if (!q) return;
+    if (q.level === 2) {
+      if (current === 'whole') setActiveField('numerator');
+      else if (current === 'numerator') setActiveField('denominator');
+    } else {
+      if (current === 'numerator') setActiveField('denominator');
+    }
+  }
+
+  function keyDelete() {
+    const field = state.activeField;
+    if (!field) return;
+    const current = state.values[field];
+    if (current.length > 0) {
+      state.values[field] = current.slice(0, -1);
+    } else {
+      // Move to previous field
+      const q = state.question;
+      if (q && q.level === 2) {
+        if (field === 'denominator') setActiveField('numerator');
+        else if (field === 'numerator') setActiveField('whole');
+      } else {
+        if (field === 'denominator') setActiveField('numerator');
+      }
+    }
+    renderInputValues();
+  }
+
+  // ============================================================
+  // ANSWER CHECKING
+  // ============================================================
+  function checkAnswer() {
+    const q = state.question;
+    if (!q) return;
+
+    const userNumerator = state.values.numerator;
+    const userDenominator = state.values.denominator;
+    const userWhole = state.values.whole;
+
+    // Validate required fields
+    if (!userNumerator || !userDenominator) {
+      shakeInputs();
+      return;
+    }
+    if (q.level === 2 && !userWhole) {
+      shakeInputs();
+      return;
+    }
+
+    const correct = q.answer;
+    let isCorrect = false;
+
+    if (q.level === 2) {
+      isCorrect = userWhole === correct.whole &&
+                  userNumerator === correct.numerator &&
+                  userDenominator === correct.denominator;
+    } else {
+      isCorrect = userNumerator === correct.numerator &&
+                  userDenominator === correct.denominator;
+    }
+
+    if (isCorrect) {
+      onCorrect();
+    } else {
+      onIncorrect();
+    }
+  }
+
+  function shakeInputs() {
+    const inputArea = document.getElementById('input-area');
+    inputArea.classList.add('shake');
+    setTimeout(() => inputArea.classList.remove('shake'), 400);
+  }
+
+  // ============================================================
+  // FEEDBACK
+  // ============================================================
+  function onCorrect() {
+    state.stars += 10;
+    state.correctCount++;
+    saveState();
+
+    // Animate stars
+    const starIcon = document.getElementById('star-icon');
+    starIcon.classList.add('star-pop');
+    setTimeout(() => starIcon.classList.remove('star-pop'), 300);
+
+    renderStars();
+    renderProgress();
+
+    showFeedback(true);
+
+    if (state.correctCount >= 5) {
+      setTimeout(() => showLevelComplete(), 1500);
+    } else {
+      setTimeout(() => {
+        clearFeedback();
+        generateQuestion();
+      }, 1500);
+    }
+  }
+
+  function onIncorrect() {
+    showFeedback(false);
+    // Show explanation
+    const expBox = document.getElementById('explanation-box');
+    const expText = document.getElementById('explanation-text');
+    expBox.classList.remove('hidden');
+    expBox.classList.add('fade-in');
+
+    const explainFns = [null, explainLevel1, explainLevel2, explainLevel3, explainLevel4];
+    expText.innerHTML = explainFns[state.question.level](state.question);
+
+    // Clear inputs for retry
+    state.values = { whole: '', numerator: '', denominator: '' };
+    if (state.question.level === 2) setActiveField('whole');
+    else setActiveField('numerator');
+    renderInputValues();
+  }
+
+  function showFeedback(correct) {
+    const area = document.getElementById('feedback-area');
+    const text = document.getElementById('feedback-text');
+    area.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'fade-in');
+    void area.offsetWidth; // reflow for animation
+    area.classList.add('fade-in');
+
+    if (correct) {
+      area.classList.add('bg-green-100');
+      const msgs = ['✅ כל הכבוד! תשובה נכונה! 🌟', '✅ מצוין! כך זה עושים! 🎉', '✅ נהדר! את ממש חכמה! ⭐', '✅ פנטסטי! המשיכי כך! 🚀'];
+      text.className = 'text-lg font-bold text-green-700';
+      text.textContent = randFrom(msgs);
+    } else {
+      area.classList.add('bg-red-100');
+      const msgs = ['❌ לא מדויק, נסי שוב! 💪', '❌ כמעט! בדקי את ההסבר למטה 👇', '❌ לא נורא! קראי את הרמז 💡'];
+      text.className = 'text-lg font-bold text-red-600';
+      text.textContent = randFrom(msgs);
+    }
+  }
+
+  function clearFeedback() {
+    document.getElementById('feedback-area').classList.add('hidden');
+    document.getElementById('explanation-box').classList.add('hidden');
+  }
+
+  // ============================================================
+  // LEVEL COMPLETE
+  // ============================================================
+  function showLevelComplete() {
+    const overlay = document.getElementById('level-complete');
+    const subtitle = document.getElementById('complete-subtitle');
+    const btnNext = document.getElementById('btn-next-level');
+    const emoji = document.getElementById('complete-emoji');
+    const title = document.getElementById('complete-title');
+
+    subtitle.textContent = `פתרת 5 תרגילים ברמה ${state.level}!`;
+
+    if (state.level >= 4) {
+      emoji.textContent = '🏆';
+      title.textContent = 'סיימת את כל הרמות!';
+      btnNext.textContent = '🏆 את אלופה!';
+      btnNext.onclick = () => {
+        overlay.classList.remove('show');
+        practiceMore();
+      };
+    } else {
+      emoji.textContent = '🎉';
+      title.textContent = 'כל הכבוד!';
+      btnNext.textContent = `עברי לרמה ${state.level + 1} ←`;
+      btnNext.onclick = nextLevel;
+    }
+
+    overlay.classList.add('show');
+  }
+
+  function practiceMore() {
+    state.correctCount = 0;
+    saveState();
+    document.getElementById('level-complete').classList.remove('show');
+    clearFeedback();
+    generateQuestion();
+  }
+
+  function nextLevel() {
+    if (state.level < 4) {
+      state.level++;
+      document.getElementById('level-select').value = state.level;
+    }
+    state.correctCount = 0;
+    saveState();
+    document.getElementById('level-complete').classList.remove('show');
+    clearFeedback();
+    generateQuestion();
+  }
+
+  // ============================================================
+  // LEVEL DROPDOWN
+  // ============================================================
+  document.getElementById('level-select').addEventListener('change', function() {
+    state.level = parseInt(this.value);
+    state.correctCount = 0;
+    saveState();
+    clearFeedback();
+    generateQuestion();
+  });
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  function init() {
+    loadState();
+    document.getElementById('level-select').value = state.level;
+    renderStars();
+    renderProgress();
+    generateQuestion();
+  }
+
+  init();
+  </script>
+</body>
+</html>
