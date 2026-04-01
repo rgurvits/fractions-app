@@ -67,3 +67,154 @@
 
         function jumpToLevel(l) {
             gameState.level = parseInt(l);
+            gameState.subLevel = 0;
+            save();
+            renderLevel();
+        }
+
+        function renderLevel() {
+            const visual = document.getElementById('visual-display');
+            const inputs = document.getElementById('input-fields');
+            const instruct = document.getElementById('instruction');
+            const feedback = document.getElementById('feedback');
+            
+            feedback.classList.add('hidden');
+            visual.innerHTML = "";
+            inputs.innerHTML = "";
+
+            if (gameState.level === 1) {
+                instruct.innerText = "איזה שבר מיוצג בציור?";
+                let den = [2,3,4,5,6,8][Math.floor(Math.random()*6)];
+                let num = Math.floor(Math.random() * (den - 1)) + 1;
+                gameState.current = { num, den, whole: 0, type: 'visual' };
+                
+                // Randomly choose circle or rectangle
+                if (Math.random() > 0.5) drawCircle(num, den);
+                else drawRect(num, den);
+                
+                createFractionInput(false);
+            } 
+            else if (gameState.level === 2) {
+                instruct.innerText = "הפכי את השבר המדומה למספר מעורב:";
+                let den = Math.floor(Math.random() * 3) + 3; // 3 to 5
+                let whole = Math.floor(Math.random() * 2) + 1; // 1 to 2
+                let rem = Math.floor(Math.random() * (den - 1)) + 1;
+                let totalNum = (whole * den) + rem;
+                gameState.current = { num: rem, den: den, whole: whole, promptNum: totalNum, type: 'mixed' };
+                visual.innerHTML = `<div class="text-5xl font-bold text-green-600 tracking-widest">${totalNum}/${den}</div>`;
+                createFractionInput(true);
+            }
+            else if (gameState.level === 3) {
+                let den = Math.floor(Math.random() * 5) + 4; // 4 to 8
+                let isAddition = Math.random() > 0.5;
+                
+                if (isAddition) {
+                    let n1 = Math.floor(Math.random() * (den/2)) + 1;
+                    let n2 = Math.floor(Math.random() * (den/2)) + 1;
+                    gameState.current = { num: n1 + n2, den: den, whole: 0, n1, n2, op: '+' };
+                    instruct.innerText = "פתרי את תרגיל החיבור:";
+                    visual.innerHTML = `<div class="text-4xl font-bold text-slate-700" dir="ltr">${n1}/${den} + ${n2}/${den} = ?</div>`;
+                } else {
+                    let n1 = Math.floor(Math.random() * (den-2)) + 2; // at least 2
+                    let n2 = Math.floor(Math.random() * (n1-1)) + 1; // less than n1
+                    gameState.current = { num: n1 - n2, den: den, whole: 0, n1, n2, op: '-' };
+                    instruct.innerText = "פתרי את תרגיל החיסור:";
+                    visual.innerHTML = `<div class="text-4xl font-bold text-slate-700" dir="ltr">${n1}/${den} - ${n2}/${den} = ?</div>`;
+                }
+                createFractionInput(false);
+            }
+            else if (gameState.level === 4) {
+                instruct.innerText = "קראי את הסיפור ופתרי:";
+                const names = ["רוני", "נועם", "מאיה", "אורי"];
+                const name = names[Math.floor(Math.random()*names.length)];
+                let den = Math.floor(Math.random() * 4) + 4; // 4 to 7
+                let isAddition = Math.random() > 0.5;
+                
+                if (isAddition) {
+                    let n1 = Math.floor(Math.random() * (den-2)) + 1;
+                    let n2 = Math.floor(Math.random() * (den-n1-1)) + 1;
+                    gameState.current = { num: n1 + n2, den: den, whole: 0, op: '+', n1, n2 };
+                    visual.innerHTML = `<div class="text-xl text-right p-4 bg-slate-50 rounded-lg border border-slate-200">ל${name} היו <b>${n1}/${den}</b> של חפיסת שוקולד. חבר נתן לו עוד <b>${n2}/${den}</b>.<br><br>כמה שוקולד יש ל${name} עכשיו?</div>`;
+                } else {
+                    let n1 = Math.floor(Math.random() * (den-2)) + 2;
+                    let n2 = Math.floor(Math.random() * (n1-1)) + 1;
+                    gameState.current = { num: n1 - n2, den: den, whole: 0, op: '-', n1, n2 };
+                    visual.innerHTML = `<div class="text-xl text-right p-4 bg-slate-50 rounded-lg border border-slate-200">ל${name} היו <b>${n1}/${den}</b> של פיצה. הוא אכל <b>${n2}/${den}</b>.<br><br>כמה פיצה נשארה ל${name}?</div>`;
+                }
+                createFractionInput(false);
+            }
+        }
+
+        // --- Visual Functions ---
+        function drawCircle(num, den) {
+            let html = `<svg viewBox="0 0 100 100" class="w-32 h-32 drop-shadow-md">
+                <circle cx="50" cy="50" r="48" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" />`;
+            for (let i = 0; i < den; i++) {
+                const start = (i * 360) / den;
+                const end = ((i + 1) * 360) / den;
+                const x1 = 50 + 48 * Math.cos((Math.PI * (start-90)) / 180);
+                const y1 = 50 + 48 * Math.sin((Math.PI * (start-90)) / 180);
+                const x2 = 50 + 48 * Math.cos((Math.PI * (end-90)) / 180);
+                const y2 = 50 + 48 * Math.sin((Math.PI * (end-90)) / 180);
+                let fill = i < num ? '#f59e0b' : 'transparent'; // Orange for Pizza
+                html += `<path d="M50,50 L${x1},${y1} A48,48 0 0,1 ${x2},${y2} Z" fill="${fill}" stroke="#cbd5e1" stroke-width="1.5" />`;
+            }
+            html += `</svg>`;
+            document.getElementById('visual-display').innerHTML = html;
+        }
+
+        function drawRect(num, den) {
+            let html = `<svg viewBox="0 0 ${den*30} 40" class="h-16 drop-shadow-md rounded-sm">`;
+            for(let i=0; i<den; i++) {
+                let fill = i < num ? '#8b5a2b' : '#f1f5f9'; // Brown for chocolate
+                html += `<rect x="${i*30}" y="0" width="30" height="40" fill="${fill}" stroke="#ffffff" stroke-width="2" />`;
+            }
+            html += `</svg>`;
+            document.getElementById('visual-display').innerHTML = html;
+        }
+        // ------------------------
+
+        function createFractionInput(withWhole) {
+            let html = "";
+            if (withWhole) {
+                html += `<div class="flex flex-col items-center"><span class="text-sm text-slate-500 mb-1">שלמים</span><input id="ans-w" type="number" class="num-box"></div>`;
+            }
+            html += `<div class="flex flex-col items-center gap-2">
+                        <span class="text-sm text-slate-500 -mb-1">מונה (חלקים)</span>
+                        <input id="ans-n" type="number" class="num-box">
+                        <div class="fraction-line"></div>
+                        <input id="ans-d" type="number" class="num-box">
+                        <span class="text-sm text-slate-500 -mt-1">מכנה (סה"כ)</span>
+                     </div>`;
+            document.getElementById('input-fields').innerHTML = html;
+        }
+
+        function validate() {
+            const uN = parseInt(document.getElementById('ans-n').value) || 0;
+            const uD = parseInt(document.getElementById('ans-d').value) || 0;
+            const uW = parseInt(document.getElementById('ans-w')?.value || 0);
+            const feedback = document.getElementById('feedback');
+            const msg = document.getElementById('feedback-msg');
+            const exp = document.getElementById('explanation-box');
+
+            if (uN === gameState.current.num && uD === gameState.current.den && uW === gameState.current.whole) {
+                msg.innerText = "אלופה! תשובה נכונה! 🎉";
+                msg.className = "p-4 rounded-xl text-center font-bold mb-4 bg-green-100 text-green-700 text-xl border-2 border-green-300";
+                gameState.stars += 10;
+                gameState.subLevel++;
+                exp.classList.add('hidden');
+                
+                setTimeout(() => {
+                    if (gameState.subLevel >= 5) {
+                        gameState.level = Math.min(4, gameState.level + 1);
+                        gameState.subLevel = 0;
+                    }
+                    save();
+                    renderLevel();
+                }, 1800);
+            } else {
+                msg.innerText = "כמעט... בואי נבדוק ביחד איפה הטעות.";
+                msg.className = "p-4 rounded-xl text-center font-bold mb-4 bg-red-100 text-red-700 text-xl border-2 border-red-300";
+                exp.classList.remove('hidden');
+                setExplanation();
+            }
